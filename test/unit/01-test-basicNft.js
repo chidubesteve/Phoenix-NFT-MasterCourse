@@ -1,4 +1,4 @@
-const { network, getNamedAccounts, deployments, ethers } = require("hardhat");
+const { network,  deployments, ethers } = require("hardhat");
 const {
   developmentChains
 } = require("../../helper-hardhat-config");
@@ -31,7 +31,7 @@ const { assert } = require("chai");
           txResponse = await basicNft.mintNft();
           txResponse.wait(1);
         });
-        it("allows the contact caller to mint NFT", async () => {
+        it("allows the contract caller to mint NFT", async () => {
           const tokenURI = await basicNft.tokenURI(0);
           const tokenCounter = await basicNft.getTokenCounter();
 
