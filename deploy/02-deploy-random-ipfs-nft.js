@@ -2,24 +2,48 @@ const { network, ethers } = require("hardhat");
 const {
   developmentChains,
   networkConfig,
-  VERIFICATION_BLOCK_CONFIRMATIONS,
 } = require("../helper-hardhat-config");
 const { verify } = require("../utils/verify");
-const {storeImages} = require("../utils/uploadToPinata")
+const {storeImages, storeTokenUriMetadata} = require("../utils/uploadToPinata")
 
-const imageLocation = "../images/randomNft";
 
+
+const FUND_AMOUNT = "1000000000000000000000";
+const imageLocation = "images/randomNft/";
+
+let tokenUris = [
+  'ipfs://QmaVkBn2tKmjbhphU7eyztbvSQU5EXDdqRyXZtRhSGgJGo',      
+  'ipfs://QmYQC5aGZu2PTH8XzbJrbDnvhj3gVs7ya33H9mqUNvST3d',      
+  'ipfs://QmZYmH5iDbD6v3U2ixoVAjioSzvWJszDzYdbeCLquGSpVm'       
+]
+
+  const metadataTemplate = {
+    name: "",
+    description: "",
+    image: "", // //ipfs//${imagehash}
+    attributes: [
+      {
+        trait_type: "Cuteness",
+        value: 100,
+      },
+    ]
+  }
+
+console.log("I have reached here")
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
   const chainId = network.config.chainId;
   let vrfCoordinatorV2Address, subscriptionId;
-  let tokenUris
+
+
+  console.log("I have reached here")
 
   // we need to get the IPFS hashes of our images
   if(process.env.UPLOAD_TO_PINATA == "true") {
     tokenUris = await handleTokenUris()
   }
+  console.log("I have reached here")
 
 
   if (developmentChains.includes(network.name)) {
@@ -27,32 +51,75 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       "VRFCoordinatorV2Mock"
     );
 
+    console.log("I have reached here")
+
     vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
     console.log(`Address ${vrfCoordinatorV2Address}`);
     const txResponse = await vrfCoordinatorV2Mock.createSubscription();
     const txReceipt = await txResponse.wait(1);
     subscriptionId = txReceipt.events[0].args.subId;
+
+    console.log("I have reached here")
+
+    await vrfCoordinatorV2Mock.fundSubscription(subscriptionId, FUND_AMOUNT)
   } else {
     vrfCoordinatorV2Address = networkConfig[chainId].vrfCoordinatorV2;
     subscriptionId = networkConfig[chainId].subscriptionId;
   }
   log("########################################");
-  await storeImages(imageLocation)
-  // const args = [
-  //   vrfCoordinatorV2Address,
-  //   subscriptionId,
-  //   networkConfig[chainId].gasLane,
-  //   networkConfig[chainId].callBackGasLimit,
-  //   //   tokenUri
-  //   networkConfig[chainId].mintFee,
-  // ];
-};
 
+  const args = [
+    vrfCoordinatorV2Address,
+    subscriptionId,
+    networkConfig[chainId]["gasLane"],
+    networkConfig[chainId]["callbackGasLimit"],
+    tokenUris,
+    networkConfig[chainId]["mintFee"]
+  ];
+
+
+console.log("After args")
+    const randomIpfsNft = await deploy("RandomIpfsNft", {
+      from: deployer,
+      args: args,
+      log: true,
+      waitConfirmations: network.config.blockConfirmations || 1
+    })
+    // adding a consumer
+  //   if (developmentChains.includes(network.name)) {
+  //     await vrfCoordinatorV2Mock.addConsumer(subscriptionId, randomIpfsNft.address)
+  // }
+  // verifying the deployments
+    if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+      log("verifying.....")
+      await verify(randomIpfsNft.address, args)
+      log("verified!")
+
+}
+
+}
 async function handleTokenUris() {
   tokenUris = [];
   // we need to save the image to ipfs
   // then we need to save the metadata to ipfs
+  const {responses: imageUploadResponses, files} = await storeImages(imageLocation)
+  for (const imageUploadResponseIndex in imageUploadResponses) {
+    // create metadata & upload metadata
+    let tokenUriMetadata = {...metadataTemplate}
+      tokenUriMetadata.name = files[imageUploadResponseIndex].replace(".png", "")
+      tokenUriMetadata.description = `An adorable ${tokenUriMetadata.name} pup!`
+      tokenUriMetadata.image = `ipfs://${imageUploadResponses[imageUploadResponseIndex].IpfsHash}`
+      console.log(`Uploading ${tokenUriMetadata.name} to ipfs...`)
 
-  return tokenUris;
-}
+      // store the metadata to ipfs/pinata
+      const metadataUploadResponse = await storeTokenUriMetadata(tokenUriMetadata)
+      tokenUris.push(`ipfs://${metadataUploadResponse.IpfsHash}`)
+    }
+    console.log("Token Uris uploaded, They are:")
+    console.log(tokenUris)
+
+    return tokenUris;
+
+  }
+
 module.exports.tags = ["all", "randomipfs", "main"]
