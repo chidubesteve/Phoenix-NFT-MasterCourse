@@ -29,37 +29,29 @@ let tokenUris = [
     ]
   }
 
-console.log("I have reached here")
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
   const chainId = network.config.chainId;
   let vrfCoordinatorV2Address, subscriptionId;
+  let vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
 
-
-  console.log("I have reached here")
 
   // we need to get the IPFS hashes of our images
   if(process.env.UPLOAD_TO_PINATA == "true") {
     tokenUris = await handleTokenUris()
   }
-  console.log("I have reached here")
 
 
   if (developmentChains.includes(network.name)) {
-    const vrfCoordinatorV2Mock = await ethers.getContract(
-      "VRFCoordinatorV2Mock"
-    );
+     await vrfCoordinatorV2Mock 
 
-    console.log("I have reached here")
 
     vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
     console.log(`Address ${vrfCoordinatorV2Address}`);
     const txResponse = await vrfCoordinatorV2Mock.createSubscription();
     const txReceipt = await txResponse.wait(1);
     subscriptionId = txReceipt.events[0].args.subId;
-
-    console.log("I have reached here")
 
     await vrfCoordinatorV2Mock.fundSubscription(subscriptionId, FUND_AMOUNT)
   } else {
@@ -86,9 +78,9 @@ console.log("After args")
       waitConfirmations: network.config.blockConfirmations || 1
     })
     // adding a consumer
-  //   if (developmentChains.includes(network.name)) {
-  //     await vrfCoordinatorV2Mock.addConsumer(subscriptionId, randomIpfsNft.address)
-  // }
+    if (developmentChains.includes(network.name)) {
+      await vrfCoordinatorV2Mock.addConsumer(subscriptionId, randomIpfsNft.address)
+  }
   // verifying the deployments
     if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
       log("verifying.....")
