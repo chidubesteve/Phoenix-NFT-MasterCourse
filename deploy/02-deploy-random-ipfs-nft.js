@@ -12,9 +12,9 @@ const FUND_AMOUNT = "1000000000000000000000";
 const imageLocation = "images/randomNft/";
 
 let tokenUris = [
-  'ipfs://QmaVkBn2tKmjbhphU7eyztbvSQU5EXDdqRyXZtRhSGgJGo',      
-  'ipfs://QmYQC5aGZu2PTH8XzbJrbDnvhj3gVs7ya33H9mqUNvST3d',      
-  'ipfs://QmZYmH5iDbD6v3U2ixoVAjioSzvWJszDzYdbeCLquGSpVm'       
+  "ipfs://QmaVkBn2tKmjbhphU7eyztbvSQU5EXDdqRyXZtRhSGgJGo",      
+  "ipfs://QmYQC5aGZu2PTH8XzbJrbDnvhj3gVs7ya33H9mqUNvST3d",      
+  "ipfs://QmZYmH5iDbD6v3U2ixoVAjioSzvWJszDzYdbeCLquGSpVm"       
 ]
 
   const metadataTemplate = {
@@ -33,8 +33,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
   const chainId = network.config.chainId;
-  let vrfCoordinatorV2Address, subscriptionId;
-  let vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
+  let vrfCoordinatorV2Address, subscriptionId, vrfCoordinatorV2Mock
+
 
 
   // we need to get the IPFS hashes of our images
@@ -44,11 +44,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
 
   if (developmentChains.includes(network.name)) {
-     await vrfCoordinatorV2Mock 
-
-
+    vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
     vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
-    console.log(`Address ${vrfCoordinatorV2Address}`);
     const txResponse = await vrfCoordinatorV2Mock.createSubscription();
     const txReceipt = await txResponse.wait(1);
     subscriptionId = txReceipt.events[0].args.subId;
@@ -70,13 +67,14 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   ];
 
 
-console.log("After args")
     const randomIpfsNft = await deploy("RandomIpfsNft", {
       from: deployer,
       args: args,
       log: true,
       waitConfirmations: network.config.blockConfirmations || 1
     })
+    
+
     // adding a consumer
     if (developmentChains.includes(network.name)) {
       await vrfCoordinatorV2Mock.addConsumer(subscriptionId, randomIpfsNft.address)

@@ -64,6 +64,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     i_mintFee = mintFee;
     _initializeContract(dogTokenUris);
     s_tokenCounter = 0;
+
   }
 
   function requestNft() public payable returns (uint256 requestId) {

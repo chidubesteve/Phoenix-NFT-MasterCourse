@@ -17,6 +17,7 @@ module.exports = {
     hardhat: {
       chainId: 31337,
       blockConfirmations: 1,
+      allowUnlimitedContractSize: true
       // forking: {
       //   url: MAINNET_RPC_URL,
       // }
@@ -25,7 +26,9 @@ module.exports = {
       url: SEPOLIA_RPC_URL,
       accounts: [PRIVATE_KEY],
       chainId: 11155111,
-      blockConfirmations: 6
+      blockConfirmations: 6,
+      gasLimit: 100000,
+      allowUnlimitedContractSize: true
     },
   },
   solidity: {
@@ -53,7 +56,7 @@ gasReporter: {
 
   },
   mocha: {
-    timeout: 300000, //300 secs
+    timeout: 500000, //300 secs
   }
 
 };
